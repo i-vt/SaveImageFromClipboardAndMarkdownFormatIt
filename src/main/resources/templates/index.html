@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clipboard Image Upload</title>
+    <style>
+        /* Global styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1E1E1E;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #E0E0E0;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+
+        #status {
+            font-size: 1rem;
+            color: #BBB;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        /* Image styles */
+        img {
+            max-width: 100%;
+            max-height: 400px;
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Formats container */
+        .format-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #2D2D2D;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            width: 80%;
+            max-width: 600px;
+            display: none;
+            text-align: left;
+        }
+
+        .format-container h3 {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            color: #E0E0E0;
+        }
+
+        /* Invisible table styles */
+        table {
+            width: 100%;
+            border-spacing: 10px;
+            border-collapse: collapse;
+        }
+
+        td {
+            padding: 8px;
+            vertical-align: top;
+        }
+
+        td strong {
+            display: block;
+            color: #4CAF50;
+            cursor: pointer;
+        }
+
+        td span {
+            display: block;
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            color: #FFF;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Accessibility Focus Styles */
+        .format-container strong:focus {
+            outline: 2px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Paste an Image (CTRL+V)</h1>
+    </header>
+
+    <main>
+        <section id="formats" class="format-container">
+            <h3>Image Formats (Click to Copy)</h3>
+
+            <table>
+                <tr>
+                    <td><strong id="markdown-copy" tabindex="0" onclick="copyToClipboard('markdown-format')">Markdown Format</strong></td>
+                    <td><span id="markdown-format"></span></td>
+                </tr>
+
+                <tr>
+                    <td><strong id="html-copy" tabindex="0" onclick="copyToClipboard('html-format')">HTML Format</strong></td>
+                    <td><span id="html-format"></span></td>
+                </tr>
+
+                <tr>
+                    <td><strong id="url-copy" tabindex="0" onclick="copyToClipboard('url-format')">URL Format</strong></td>
+                    <td><span id="url-format"></span></td>
+                </tr>
+            </table>
+
+            <!-- Image and notification placed below the table -->
+            <img id="image" style="display: none;" alt="Uploaded Image" />
+            <div id="status">Paste an image using CTRL+V...</div>
+        </section>
+    </main>
+
+    <script>
+        // Event listener for image paste event
+        document.addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            let image = null;
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf("image") === 0) {
+                    image = items[i].getAsFile();
+                    break;
+                }
+            }
+
+            if (image) {
+                const formData = new FormData();
+                formData.append('file', image);
+                
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const imageUrl = '/images/' + data.filename;
+                        const markdown = `![alt text](${imageUrl} "TitleText")`;
+                        const html = `<img src="${imageUrl}" alt="Uploaded Image">`;
+                        const url = `${imageUrl}`;
+
+                        // Display the image and formats
+                        document.getElementById('image').src = imageUrl;
+                        document.getElementById('image').alt = data.filename;
+                        document.getElementById('image').style.display = 'block';
+                        document.getElementById('status').textContent = 'Image uploaded successfully: ' + data.filename;
+
+                        // Populate formats
+                        document.getElementById('markdown-format').textContent = markdown;
+                        document.getElementById('html-format').textContent = html;
+                        document.getElementById('url-format').textContent = url;
+
+                        // Show formats section
+                        document.getElementById('formats').style.display = 'block';
+                    } else {
+                        document.getElementById('status').textContent = 'Upload failed. Please try again.';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('status').textContent = 'Error: ' + error.message;
+                });
+            } else {
+                document.getElementById('status').textContent = 'No image detected in clipboard.';
+            }
+        });
+
+        // Function to copy text to clipboard
+        function copyToClipboard(formatId) {
+            const formatElement = document.getElementById(formatId);
+            const textToCopy = formatElement.textContent;
+
+            // Create a temporary textarea to copy the text
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            alert('Copied to clipboard!');
+        }
+    </script>
+
+</body>
+</html>
