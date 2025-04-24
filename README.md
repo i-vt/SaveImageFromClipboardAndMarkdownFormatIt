@@ -7,11 +7,11 @@ This build was tested using JAVA 23
 
 To Run: 
 - SaveImageFromClipboardAndMarkdownFormatIt_WithGradle.zip, unzip then
-  `cd SaveImageFromClipboardAndMarkdownFormatIt_WithGradle` into the directory,
-  and `./gradlew bootrun`
+  ```cd SaveImageFromClipboardAndMarkdownFormatIt_WithGradle``` into the directory,
+  and ```./gradlew bootrun```
 
 - The .jar is a standalone file.
-  Can be executed  via`java -jar SaveImageFromClipboardAndMarkdownFormatIt.jar`
+  Can be executed  via```java -jar SaveImageFromClipboardAndMarkdownFormatIt.jar```
 
 
 Runs on port 18754,so you can access it [http://localhost:18754/](http://localhost:18754/)
