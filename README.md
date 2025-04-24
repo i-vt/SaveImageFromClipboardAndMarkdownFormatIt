@@ -2,3 +2,16 @@
 Save image from Clipboard and Markdown format it
 
 Runs on port 18754,so you can access it [http://localhost:18754/](http://localhost:18754/)
+## GUI
+
+### First Page
+![image](https://github.com/user-attachments/assets/951f4d66-9c63-4396-a103-bf942aa13bb2)
+
+
+### Saved Image Page
+![image](https://github.com/user-attachments/assets/bce7517c-c8fa-44f3-9f51-0d087e375559)
+
+
+### Download All ZIP
+![image](https://github.com/user-attachments/assets/a613599e-f244-40f9-b397-23d48d38670c)
+
