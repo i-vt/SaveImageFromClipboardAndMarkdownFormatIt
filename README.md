@@ -14,7 +14,7 @@ To Run:
   Can be executed  via```java -jar SaveImageFromClipboardAndMarkdownFormatIt.jar```
 
 
-Runs on port 18754,so you can access it [http://localhost:18754/](http://localhost:18754/)
+Runs on port 18754,so you can access it via [http://localhost:18754/](http://localhost:18754/) url.
 ## GUI
 
 ### First Page
