@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clipboard Image Upload</title>
     <style>
-        /* Global styles */
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
@@ -33,7 +32,6 @@
             text-align: center;
         }
 
-        /* Image styles */
         img {
             max-width: 100%;
             max-height: 400px;
@@ -44,7 +42,6 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
-        /* Formats container */
         .format-container {
             margin-top: 30px;
             padding: 20px;
@@ -55,6 +52,7 @@
             max-width: 600px;
             display: none;
             text-align: left;
+            margin: 0 auto;
         }
 
         .format-container h3 {
@@ -63,7 +61,6 @@
             color: #E0E0E0;
         }
 
-        /* Invisible table styles */
         table {
             width: 100%;
             border-spacing: 10px;
@@ -81,7 +78,12 @@
             cursor: pointer;
         }
 
-        td span {
+        .format-wrapper {
+            position: relative;
+            display: block;
+        }
+
+        .format-wrapper span {
             display: block;
             background-color: #333;
             padding: 10px;
@@ -92,9 +94,42 @@
             word-wrap: break-word;
         }
 
-        /* Accessibility Focus Styles */
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.6rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #CCC;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 6px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+        }
+
         .format-container strong:focus {
             outline: 2px solid #4CAF50;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #download-all {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -105,34 +140,51 @@
     </header>
 
     <main>
+        <div class="button-container">
+            <button id="download-all" onclick="downloadAllImages()">
+                Download All Images
+            </button>
+        </div>
+
         <section id="formats" class="format-container">
             <h3>Image Formats (Click to Copy)</h3>
 
             <table>
                 <tr>
                     <td><strong id="markdown-copy" tabindex="0" onclick="copyToClipboard('markdown-format')">Markdown Format</strong></td>
-                    <td><span id="markdown-format"></span></td>
+                    <td>
+                        <div class="format-wrapper">
+                            <button class="copy-btn" onclick="copyToClipboard('markdown-format', this)">Copy</button>
+                            <span id="markdown-format"></span>
+                        </div>
+                    </td>
                 </tr>
-
                 <tr>
                     <td><strong id="html-copy" tabindex="0" onclick="copyToClipboard('html-format')">HTML Format</strong></td>
-                    <td><span id="html-format"></span></td>
+                    <td>
+                        <div class="format-wrapper">
+                            <button class="copy-btn" onclick="copyToClipboard('html-format', this)">Copy</button>
+                            <span id="html-format"></span>
+                        </div>
+                    </td>
                 </tr>
-
                 <tr>
                     <td><strong id="url-copy" tabindex="0" onclick="copyToClipboard('url-format')">URL Format</strong></td>
-                    <td><span id="url-format"></span></td>
+                    <td>
+                        <div class="format-wrapper">
+                            <button class="copy-btn" onclick="copyToClipboard('url-format', this)">Copy</button>
+                            <span id="url-format"></span>
+                        </div>
+                    </td>
                 </tr>
             </table>
 
-            <!-- Image and notification placed below the table -->
             <img id="image" style="display: none;" alt="Uploaded Image" />
             <div id="status">Paste an image using CTRL+V...</div>
         </section>
     </main>
 
     <script>
-        // Event listener for image paste event
         document.addEventListener('paste', function(e) {
             const items = e.clipboardData.items;
             let image = null;
@@ -147,7 +199,7 @@
             if (image) {
                 const formData = new FormData();
                 formData.append('file', image);
-                
+
                 fetch('/upload', {
                     method: 'POST',
                     body: formData
@@ -160,18 +212,15 @@
                         const html = `<img src="${imageUrl}" alt="Uploaded Image">`;
                         const url = `${imageUrl}`;
 
-                        // Display the image and formats
                         document.getElementById('image').src = imageUrl;
                         document.getElementById('image').alt = data.filename;
                         document.getElementById('image').style.display = 'block';
                         document.getElementById('status').textContent = 'Image uploaded successfully: ' + data.filename;
 
-                        // Populate formats
                         document.getElementById('markdown-format').textContent = markdown;
                         document.getElementById('html-format').textContent = html;
                         document.getElementById('url-format').textContent = url;
 
-                        // Show formats section
                         document.getElementById('formats').style.display = 'block';
                     } else {
                         document.getElementById('status').textContent = 'Upload failed. Please try again.';
@@ -185,12 +234,10 @@
             }
         });
 
-        // Function to copy text to clipboard
-        function copyToClipboard(formatId) {
+        function copyToClipboard(formatId, button = null) {
             const formatElement = document.getElementById(formatId);
             const textToCopy = formatElement.textContent;
 
-            // Create a temporary textarea to copy the text
             const textArea = document.createElement('textarea');
             textArea.value = textToCopy;
             document.body.appendChild(textArea);
@@ -198,9 +245,22 @@
             document.execCommand('copy');
             document.body.removeChild(textArea);
 
-            alert('Copied to clipboard!');
+            if (button) {
+                const originalText = button.textContent;
+                button.textContent = "Copied";
+                button.disabled = true;
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }, 500);
+            }
+        }
+
+        function downloadAllImages() {
+            window.location.href = '/upload/download-all';
         }
     </script>
 
 </body>
 </html>
+
