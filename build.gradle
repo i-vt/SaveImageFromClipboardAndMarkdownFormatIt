@@ -38,3 +38,6 @@ springBoot {
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
+bootRun {
+    args = ["--config.path=config.json"]
+}
