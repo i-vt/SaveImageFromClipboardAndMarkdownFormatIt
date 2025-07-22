@@ -1,6 +1,8 @@
 package com.example.project;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -15,34 +17,77 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @RestController
-@RequestMapping("/upload")
 public class ImageController {
 
-    private static final String UPLOAD_DIR = "uploaded-images/";
+    private final AppConfig config;
 
-    @PostMapping
+    public ImageController(AppConfig config) {
+        this.config = config;
+    }
+
+    @PostMapping("/upload")
     public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
-        String fileName = UUID.randomUUID().toString() + "." + getExtension(file.getOriginalFilename());
-        Path targetLocation = Path.of(UPLOAD_DIR, fileName);
+        String extension = getExtension(file.getOriginalFilename());
+        if (extension == null || extension.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new UploadResponse("Invalid file extension", false));
+        }
+
+        String fileName = UUID.randomUUID().toString() + "." + extension;
+        Path targetLocation = Path.of(config.getUploadDir(), fileName);
 
         try {
-            File dir = new File(UPLOAD_DIR);
-            if (!dir.exists()) {
-                dir.mkdirs();
+            File dir = new File(config.getUploadDir());
+            if (!dir.exists() && !dir.mkdirs()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new UploadResponse("Could not create upload directory", false));
             }
 
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-            return ResponseEntity.ok().body(new UploadResponse(fileName, true));
+            return ResponseEntity.ok(new UploadResponse(fileName, true));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new UploadResponse("Upload failed", false));
         }
     }
 
-    @GetMapping("/download-all")
-    public ResponseEntity<byte[]> downloadAllImages() throws IOException {
-        File folder = new File(UPLOAD_DIR);
-        File[] files = folder.listFiles((dir, name) -> !name.startsWith(".") && !new File(dir, name).isDirectory());
+    @GetMapping("/{prefix}/{filename:.+}")
+    public ResponseEntity<byte[]> getImage(
+            @PathVariable String prefix,
+            @PathVariable String filename
+    ) {
+        if (!prefix.equals(config.getImageEndpointPrefix())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+
+        try {
+            Path file = Path.of(config.getUploadDir(), filename);
+            if (!Files.exists(file) || Files.isDirectory(file)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] imageBytes = Files.readAllBytes(file);
+            String contentType = Files.probeContentType(file);
+            if (contentType == null || !contentType.startsWith("image/")) {
+                contentType = MediaType.IMAGE_PNG_VALUE; // fallback
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, contentType)
+                    .body(imageBytes);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/{prefix}/download-all")
+    public ResponseEntity<byte[]> downloadAllImages(@PathVariable String prefix) throws IOException {
+        if (!prefix.equals(config.getImageEndpointPrefix())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        File folder = new File(config.getUploadDir());
+        File[] files = folder.listFiles((dir, name) -> !name.startsWith(".") && new File(dir, name).isFile());
 
         if (files == null || files.length == 0) {
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -65,11 +110,12 @@ public class ImageController {
                 .body(zipBytes);
     }
 
+
     private String getExtension(String filename) {
         return StringUtils.getFilenameExtension(filename);
     }
 
-    static class UploadResponse {
+    public static class UploadResponse {
         private String filename;
         private boolean success;
 
