@@ -184,83 +184,115 @@
         </section>
     </main>
 
-    <script>
-        document.addEventListener('paste', function(e) {
-            const items = e.clipboardData.items;
-            let image = null;
+<script>
+    let imageBasePath = '/images/';           // Fallback default
+    let imageEndpointPrefix = 'uploads';      // Fallback default
+    let configReady = false;
 
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf("image") === 0) {
-                    image = items[i].getAsFile();
-                    break;
-                }
+    // Normalize to ensure trailing/leading slashes as needed
+    function normalizeBasePath(path) {
+        return path;
+    }
+
+    function normalizeEndpointPrefix(prefix) {
+        return prefix.replace(/^\/+|\/+$/g, ''); // remove leading/trailing slashes
+    }
+
+    // Fetch config values from backend
+    fetch('/config')
+        .then(res => res.json())
+        .then(cfg => {
+            if (cfg.imageBasePath) {
+                imageBasePath = normalizeBasePath(cfg.imageBasePath);
             }
-
-            if (image) {
-                const formData = new FormData();
-                formData.append('file', image);
-
-                fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const imageUrl = '/images/' + data.filename;
-                        const markdown = `![alt text](${imageUrl} "TitleText")`;
-                        const html = `<img src="${imageUrl}" alt="Uploaded Image">`;
-                        const url = `${imageUrl}`;
-
-                        document.getElementById('image').src = imageUrl;
-                        document.getElementById('image').alt = data.filename;
-                        document.getElementById('image').style.display = 'block';
-                        document.getElementById('status').textContent = 'Image uploaded successfully: ' + data.filename;
-
-                        document.getElementById('markdown-format').textContent = markdown;
-                        document.getElementById('html-format').textContent = html;
-                        document.getElementById('url-format').textContent = url;
-
-                        document.getElementById('formats').style.display = 'block';
-                    } else {
-                        document.getElementById('status').textContent = 'Upload failed. Please try again.';
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('status').textContent = 'Error: ' + error.message;
-                });
-            } else {
-                document.getElementById('status').textContent = 'No image detected in clipboard.';
+            if (cfg.imageEndpointPrefix) {
+                imageEndpointPrefix = normalizeEndpointPrefix(cfg.imageEndpointPrefix);
             }
+        })
+        .catch(() => {
+            console.warn('Falling back to default config values.');
+        })
+        .finally(() => {
+            configReady = true;
         });
 
-        function copyToClipboard(formatId, button = null) {
-            const formatElement = document.getElementById(formatId);
-            const textToCopy = formatElement.textContent;
+    document.addEventListener('paste', async function (e) {
+        if (!configReady) {
+            document.getElementById('status').textContent = 'Config is still loading. Please wait...';
+            return;
+        }
 
-            const textArea = document.createElement('textarea');
-            textArea.value = textToCopy;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
+        const items = e.clipboardData.items;
+        let image = null;
 
-            if (button) {
-                const originalText = button.textContent;
-                button.textContent = "Copied";
-                button.disabled = true;
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.disabled = false;
-                }, 500);
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image')) {
+                image = items[i].getAsFile();
+                break;
             }
         }
 
-        function downloadAllImages() {
-            window.location.href = '/upload/download-all';
+        if (!image) {
+            document.getElementById('status').textContent = 'No image detected in clipboard.';
+            return;
         }
-    </script>
+
+        const formData = new FormData();
+        formData.append('file', image);
+
+        try {
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                const filename = data.filename;
+                const previewUrl = `/${imageEndpointPrefix}/${filename}`;
+                const publicPath = `${imageBasePath}${filename}`;
+
+                document.getElementById('image').src = previewUrl;
+                document.getElementById('image').alt = filename;
+                document.getElementById('image').style.display = 'block';
+                document.getElementById('status').textContent = 'Image uploaded successfully: ' + filename;
+
+                document.getElementById('markdown-format').textContent = `![ThisTextWillShowUpIfImageCannotBeloaded](${publicPath} "TitleTextUsuallyVisible")`;
+                document.getElementById('html-format').textContent = `<img src="${publicPath}" alt="Uploaded Image">`;
+                document.getElementById('url-format').textContent = publicPath;
+
+                document.getElementById('formats').style.display = 'block';
+            } else {
+                document.getElementById('status').textContent = 'Upload failed. Please try again.';
+            }
+        } catch (error) {
+            document.getElementById('status').textContent = 'Error: ' + error.message;
+        }
+    });
+
+    function copyToClipboard(elementId, button = null) {
+        const text = document.getElementById(elementId).textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            if (button) {
+                button.textContent = "Copied!";
+                setTimeout(() => button.textContent = "Copy", 1000);
+            }
+        });
+    }
+
+    function downloadAllImages() {
+        if (!configReady) {
+            alert('Configuration not loaded yet. Please wait.');
+            return;
+        }
+        window.location.href = `/${imageEndpointPrefix}/download-all`;
+    }
+
+</script>
+
+
+
+
 
 </body>
 </html>
-
