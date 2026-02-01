@@ -1,5 +1,5 @@
 # SaveImageFromClipboardAndMarkdownFormatIt
-
+Retired. Superseded by [noterdamus]([url](https://github.com/i-vt/noterdamus)) 
 
 Save image from Clipboard and Markdown format it
 ## Installation
