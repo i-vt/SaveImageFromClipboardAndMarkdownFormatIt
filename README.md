@@ -1,7 +1,11 @@
 # SaveImageFromClipboardAndMarkdownFormatIt
-Retired. Superseded by [noterdamus](https://github.com/i-vt/noterdamus) 
 
 Save image from Clipboard and Markdown format it
+
+## Project Retired
+
+Project is retired, superseded by [noterdamus](https://github.com/i-vt/noterdamus) 
+
 ## Installation
 This build was tested using JAVA 23
 
